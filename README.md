@@ -1,3 +1,3 @@
 # hello-world
 This repository is for practicing the github Flow.
-JON likes turtles:)
+JON and Dom like turtles:)
