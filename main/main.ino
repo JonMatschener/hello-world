@@ -9,11 +9,12 @@
 #define S A1 //stand pin (pin 24)
 #define D A2 //double pin (pin 25)
 #define P 2 //play button pin (pin 4)
-#define dispCS 3 // control select (pin 5)
-#define dispDC 4 //data select (pin 6)
-#define dispRST 5 //display reset (pin 11)
-#define spkRX 6 //speaker RX (pin 12)
-#define spkTX 7 //speaker TX (pin 13)
+#define spkRX 3 //speaker RX (pin 5)
+#define spkTX 4 //speaker TX (pin 6)
+#define dispCS 5 // control select (pin 11)
+#define dispDC 6 //data select (pin 12)
+#define dispRST 7 //display reset (pin 13)
+
 
 
 const int moves[3] = {H,S,D};
