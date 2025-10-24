@@ -5,15 +5,15 @@
 #include <SPI.h>
 
 
-#define H A0 //hit pin
-#define S A1 //stand pin
-#define D A2 //double pin
-#define P 2 //play button pin
-#define dispCS 3 // control select
-#define dispDC 4 //data select
-#define dispRST 5 //display reset
-#define spkRX 6 //speaker RX
-#define spkTX 7 //speaker TX
+#define H A0 //hit pin (pin 23)
+#define S A1 //stand pin (pin 24)
+#define D A2 //double pin (pin 25)
+#define P 2 //play button pin (pin 4)
+#define dispCS 3 // control select (pin 5)
+#define dispDC 4 //data select (pin 6)
+#define dispRST 5 //display reset (pin 11)
+#define spkRX 6 //speaker RX (pin 12)
+#define spkTX 7 //speaker TX (pin 13)
 
 
 const int moves[3] = {H,S,D};
