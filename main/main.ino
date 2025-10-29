@@ -19,7 +19,7 @@
 
 const int moves[3] = {H,S,D};
 const double levels[3] = {0,0,0}; //voltage analogthresholds for hit, stand, double
-const double startTime = 3000; //start time in milliseconds
+const double startTime = 10000; //start time in milliseconds
 const double timeMult = 0.98; //time multiplier each round to slow down time
 const String suits[4] = {"♠ ", "♥ ", "♦ ", "♣ "}; //suits
 const String ranks[13] = {"2","3","4","5","6","7","8","9","🔟","J","Q","K","A"}; //ranks
@@ -86,10 +86,17 @@ void updateDisp(Hand player,Hand dealer){ //show cards on display
   tft.setCursor(0,0); //move cursor to top
   tft.println(dealer.disp); //dealer hand at top
   tft.println(player.disp); //player hand at bottom
+  Serial.println(dealer.disp);
+  Serial.println(player.disp);
+  tft.print(String(score)); //print score
+  tft.print("\t"); //print tab between score and lives
+  for(int i=0;i<lives;i++) tft.print("♥"); //print lives
+  Serial.println((score));
+  Serial.println(String(lives));
 }
 
 //hard total moves
-const int hard[10][10] = { //suggested moves for hard totals, hard[min(0,17-i)][j-2] for total i and upcard j
+const int hard[10][10] = { //suggested moves for hard totals, hard[max(0,17-i)][j-2] for total i and upcard j
 {S,S,S,S,S,S,S,S,S,S},
 {S,S,S,S,S,H,H,H,H,H},
 {S,S,S,S,S,H,H,H,H,H},
@@ -111,14 +118,15 @@ const int soft[8][10] = { //suggested moved for soft totals, soft[9-i][j-2] for 
 {H,H,D,D,D,H,H,H,H,H},
 {H,H,D,D,D,H,H,H,H,H},
 {H,H,H,D,D,H,H,H,H,H},
-{H,H,H,D,D,H,H,H,H,H},
+{H,H,H,D,D,H,H,H,H,H}
 };
 
 int action(Hand player,Hand dealer){
-  //if soft above 10, play as hard (total+1)
-  //soft 10 is blackjack lol
-
-  return 0;
+  int p = player.bestTotal();
+  int d = dealer.bestTotal();
+  if(player.soft) return soft[20-p,d-2]; //20-, not 9- because A = 11
+  else return hard[max(0,17-p)][d-2];
+  Serial.println(player.soft + " " + String(p) + " " + String(d));
 }
 
 int await(double time){
@@ -155,6 +163,13 @@ int whoWins(Hand player,Hand dealer){//3 for player, 2 for dealer, 1 for push, 0
 }
 
 void setup() {
+  delay(200); //short delay to let power stabilize
+  Serial.begin(9600);
+  Serial.println("Serial check!");
+  tft.begin();
+  tft.setRotation(1);
+  pinMode(8, OUTPUT);
+  digitalWrite(8, HIGH);  // turn the LED on (HIGH is the voltage level)
   pinMode(H, INPUT);
   pinMode(S, INPUT);
   pinMode(D, INPUT);
@@ -162,21 +177,42 @@ void setup() {
   pinMode(dispCS,OUTPUT);
   pinMode(dispDC,OUTPUT);
   pinMode(dispRST,OUTPUT);
-  Serial.begin(115200);
-  Serial.println("Check check!");
 
   spkSerial.begin(9600);
-  myDFPlayer.setTimeOut(500);
-  myDFPlayer.volume(0);
-  myDFPlayer.EQ(0);
+  bool dfplayerConnected = false;
+  unsigned long startTime = millis();
+  while (millis() - startTime < 2000) {     // wait up to 2 s
+    if (myDFPlayer.begin(spkSerial)) {
+      dfplayerConnected = true;
+      break;
+    }
+    delay(100);
+  }
+
+  if (dfplayerConnected) {
+    myDFPlayer.setTimeOut(500);
+    myDFPlayer.volume(0);
+    myDFPlayer.EQ(0);
+    Serial.println("DFPlayer connected");
+  } else {
+    Serial.println("no dfplayer detected, skipping audio setup");
+  }
+  Serial.println("setup complete");
 }
 
 void loop() {
+  digitalWrite(8, HIGH);  // turn the LED on (HIGH is the voltage level)
+  Serial.println("loop started");
   for(int s=0;s<4;s++) for(int r=0;r<13;r++) cards[13*s+r] = 16*s+r; //card[5] = suit, card[3-0] = rank
   // initialize game and hands
   Hand player;
   Hand dealer;
-  while(digitalRead(P)==LOW); //wait for play button to be hit
+  tft.fillScreen(ILI9341_RED); //clear screen
+  tft.setTextColor(ILI9341_BLACK); //black text
+  tft.setCursor(0,0); //move cursor to top
+  tft.println("Bet-it! Hit button to play");
+  while(digitalRead(P)==LOW);
+  Serial.println("Play");
   lives = 3;
   score = 0;
   time = startTime;
@@ -205,7 +241,7 @@ void loop() {
         myDFPlayer.play(3);
         break;
     }
-    //tell action
+    Serial.println(String(time) + " milliseconds"); //tell action
     int act=await(time); //wait for action
     if(command==act){//if correct
       //TODO
@@ -221,29 +257,39 @@ void loop() {
     }
     switch(act){ //determine how rest of the game goes
       case S:
+        Serial.println("Chose stand");
         while (dealer.dealerHits()) dealer.deal(); //keep dealing to dealer
         updateDisp(player,dealer);
         break;
       case H:
+        Serial.println("Chose hit");
         player.deal(); //deal to player
         break;
       case D:
+        Serial.println("Chose double");
         break;
       case 0:
+        Serial.println("Chose nothing");
         break;
     }
     switch(whoWins(player,dealer)){ //check who wins after initial draw and after
       case 3: //player wins
         Serial.println("player wins");
         myDFPlayer.play(6);
+        Serial.println(dealer.disp);
+        Serial.println(player.disp);
         break;
       case 2: //dealer wins
         Serial.println("dealer wins");
         myDFPlayer.play(7);
+        Serial.println(dealer.disp);
+        Serial.println(player.disp);
         break;
       case 1: //push
         Serial.println("push");
         myDFPlayer.play(8);
+        Serial.println(dealer.disp);
+        Serial.println(player.disp);
         break;
       case 0: //nothing
         break;
@@ -251,10 +297,12 @@ void loop() {
     time*=timeMult;
     if(score==99){
       Serial.println("WIN");
+      Serial.println(String(lives));
       myDFPlayer.play(9);
     }
     if(lives==0){
       Serial.println("Game over");
+      Serial.println(String(score));
       myDFPlayer.play(10);
     }
   }
