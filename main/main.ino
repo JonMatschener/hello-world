@@ -3,6 +3,7 @@
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 #include <SPI.h>
+//#include <DejaVu_Symbols.h>
 
 
 #define H A0 //hit pin (pin 23)
@@ -18,11 +19,12 @@
 
 
 const int moves[3] = {H,S,D};
-const double levels[3] = {0,0,0}; //voltage analogthresholds for hit, stand, double
-const double startTime = 10000; //start time in milliseconds
+const double levels[3] = {2.5,1.8,1.2}; //voltage analog thresholds for hit, stand, double
+const bool activeHigh[3] = {true, false, false}; //does voltage increase when hit, stand, or double are used?
+const double startTime = 3000; //start time in milliseconds
 const double timeMult = 0.98; //time multiplier each round to slow down time
-const String suits[4] = {"♠ ", "♥ ", "♦ ", "♣ "}; //suits
-const String ranks[13] = {"2","3","4","5","6","7","8","9","🔟","J","Q","K","A"}; //ranks
+const String suits[4] = {"/ ", "- ", "+ ", "* "}; //suits, assuming font works
+const String ranks[13] = {"2","3","4","5","6","7","8","9","X","J","Q","K","A"}; //ranks
 int lives; //number of lives
 int score; //score
 double time; //current time between reactions
@@ -31,7 +33,8 @@ int order[52]; //order of cards
 int cards[52]; //deck
 
 Adafruit_ILI9341 tft = Adafruit_ILI9341(dispCS,dispDC,dispRST); //initalize display
-SoftwareSerial spkSerial(spkRX,spkTX); //serial for speaker
+//tft.setFont(&DejaVu_Symbols);
+SoftwareSerial spkSerial(spkTX,spkRX); //serial for speaker
 DFRobotDFPlayerMini myDFPlayer;
 
 class Hand{
@@ -90,7 +93,7 @@ void updateDisp(Hand player,Hand dealer){ //show cards on display
   Serial.println(player.disp);
   tft.print(String(score)); //print score
   tft.print("\t"); //print tab between score and lives
-  for(int i=0;i<lives;i++) tft.print("♥"); //print lives
+  for(int i=0;i<lives;i++) tft.print("â¥"); //print lives
   Serial.println((score));
   Serial.println(String(lives));
 }
@@ -133,7 +136,7 @@ int await(double time){
   double start = millis(); //record current time for start
   while(millis() - start < time){
     for(int i=0;i<3;i++)
-    if(analogRead(moves[i])>levels[i]) return moves[i]; //read each pin for a move
+    if((analogRead(moves[i])>levels[i])==activeHigh[i]) return moves[i]; //read each pin for a move
   }
   return 0;
 }
@@ -163,9 +166,9 @@ int whoWins(Hand player,Hand dealer){//3 for player, 2 for dealer, 1 for push, 0
 }
 
 void setup() {
-  delay(200); //short delay to let power stabilize
+  delay(1200); //short delay to let power stabilize
   Serial.begin(9600);
-  Serial.println("Serial check!");
+  Serial.println("Serial check");
   tft.begin();
   tft.setRotation(1);
   pinMode(8, OUTPUT);
@@ -190,10 +193,13 @@ void setup() {
   }
 
   if (dfplayerConnected) {
-    myDFPlayer.setTimeOut(500);
-    myDFPlayer.volume(0);
-    myDFPlayer.EQ(0);
     Serial.println("DFPlayer connected");
+    myDFPlayer.setTimeOut(500);
+    Serial.println("timeout set");
+    myDFPlayer.volume(10);
+    Serial.println("volume set");    
+    myDFPlayer.play(1);
+    Serial.println("Playing track 1");
   } else {
     Serial.println("no dfplayer detected, skipping audio setup");
   }
