@@ -3,6 +3,8 @@
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 #include <SPI.h>
+#include "BetItFont10pt7b.h"
+//#include <DejaVu_Symbols.h>
 
 
 #define H A0 //hit pin (pin 23)
@@ -18,20 +20,20 @@
 
 
 const int moves[3] = {H,S,D};
-const double levels[3] = {0,0,0}; //voltage analogthresholds for hit, stand, double
-const double startTime = 10000; //start time in milliseconds
+const double levels[3] = {2.5,1.8,1.2}; //voltage analog thresholds for hit, stand, double
+const bool activeHigh[3] = {true, false, false}; //does voltage increase when hit, stand, or double are used?
+const double startTime = 3000; //start time in milliseconds
 const double timeMult = 0.98; //time multiplier each round to slow down time
-const String suits[4] = {"♠ ", "♥ ", "♦ ", "♣ "}; //suits
-const String ranks[13] = {"2","3","4","5","6","7","8","9","🔟","J","Q","K","A"}; //ranks
+const String suits[4] = {"/ ", "- ", "+ ", "* "}; //suits, assuming font works
+const String ranks[13] = {"2","3","4","5","6","7","8","9","X","J","Q","K","A"}; //ranks
 int lives; //number of lives
 int score; //score
 double time; //current time between reactions
 int index; //pointer to next card
 int order[52]; //order of cards
 int cards[52]; //deck
-
 Adafruit_ILI9341 tft = Adafruit_ILI9341(dispCS,dispDC,dispRST); //initalize display
-SoftwareSerial spkSerial(spkRX,spkTX); //serial for speaker
+SoftwareSerial spkSerial(spkTX,spkRX); //serial for speaker
 DFRobotDFPlayerMini myDFPlayer;
 
 class Hand{
@@ -51,12 +53,13 @@ class Hand{
       return (ranks[card%16] + suits[card/16]); //decode card to display
     }
     int deal(){
-      index++; //increment card before return
-      int draw = cards[order[index-1]]; //return card
+      int draw = cards[order[index++]]; //return card
       hand[numCards++] = draw; //add card to hand
       int val = cardToNum(draw); //get value of draw
       if(val==1 && !soft) soft=true; //set soft total for first ace
       else total += val;
+      Serial.println("Drew " + String(draw));
+      Serial.print(dispCard(draw));
       disp += dispCard(draw); //add card to display
     }
     int newestCard(){return hand[numCards];}
@@ -83,15 +86,16 @@ class Hand{
 void updateDisp(Hand player,Hand dealer){ //show cards on display
   tft.fillScreen(ILI9341_WHITE); //clear screen
   tft.setTextColor(ILI9341_BLACK); //black text
-  tft.setCursor(0,0); //move cursor to top
+  tft.setCursor(0,20); //move cursor to top
   tft.println(dealer.disp); //dealer hand at top
   tft.println(player.disp); //player hand at bottom
   Serial.println(dealer.disp);
   Serial.println(player.disp);
+  tft.print("$");
   tft.print(String(score)); //print score
   tft.print("\t"); //print tab between score and lives
-  for(int i=0;i<lives;i++) tft.print("♥"); //print lives
-  Serial.println((score));
+  for(int i=0;i<lives;i++) tft.print("-"); //print lives
+  Serial.println(String(score));
   Serial.println(String(lives));
 }
 
@@ -133,7 +137,7 @@ int await(double time){
   double start = millis(); //record current time for start
   while(millis() - start < time){
     for(int i=0;i<3;i++)
-    if(analogRead(moves[i])>levels[i]) return moves[i]; //read each pin for a move
+    if((analogRead(moves[i])>levels[i])==activeHigh[i]) return moves[i]; //read each pin for a move
   }
   return 0;
 }
@@ -145,7 +149,9 @@ void shuffle(){
     int temp = order[i];
     order[i] = order[j];
     order[j] = temp;
+    Serial.print(cards[order[i]])
   }
+  Serial.println("");
   index=0;
 }
 
@@ -163,10 +169,11 @@ int whoWins(Hand player,Hand dealer){//3 for player, 2 for dealer, 1 for push, 0
 }
 
 void setup() {
-  delay(200); //short delay to let power stabilize
-  Serial.begin(9600);
-  Serial.println("Serial check!");
+  delay(1200); //short delay to let power stabilize
+  Serial.begin(115200);
+  Serial.println("Serial check");
   tft.begin();
+  tft.setFont(&BetItFont10pt7b); //match name of original file
   tft.setRotation(1);
   pinMode(8, OUTPUT);
   digitalWrite(8, HIGH);  // turn the LED on (HIGH is the voltage level)
@@ -179,21 +186,15 @@ void setup() {
   pinMode(dispRST,OUTPUT);
 
   spkSerial.begin(9600);
-  bool dfplayerConnected = false;
-  unsigned long startTime = millis();
-  while (millis() - startTime < 2000) {     // wait up to 2 s
-    if (myDFPlayer.begin(spkSerial)) {
-      dfplayerConnected = true;
-      break;
-    }
-    delay(100);
-  }
 
-  if (dfplayerConnected) {
-    myDFPlayer.setTimeOut(500);
-    myDFPlayer.volume(0);
-    myDFPlayer.EQ(0);
+  if (myDFPlayer.begin(spkSerial)) {
     Serial.println("DFPlayer connected");
+    myDFPlayer.setTimeOut(500);
+    Serial.println("timeout set");
+    myDFPlayer.volume(10);
+    Serial.println("volume set");    
+    myDFPlayer.play(1);
+    Serial.println("Playing track 1");
   } else {
     Serial.println("no dfplayer detected, skipping audio setup");
   }
@@ -203,24 +204,26 @@ void setup() {
 void loop() {
   digitalWrite(8, HIGH);  // turn the LED on (HIGH is the voltage level)
   Serial.println("loop started");
-  for(int s=0;s<4;s++) for(int r=0;r<13;r++) cards[13*s+r] = 16*s+r; //card[5] = suit, card[3-0] = rank
+  for(int s=0;s<4;s++) for(int r=0;r<13;r++) cards[13*s+r] = 16*s+r; //card[i/16] = suit, card[i%16] = rank
   // initialize game and hands
   Hand player;
   Hand dealer;
   tft.fillScreen(ILI9341_RED); //clear screen
   tft.setTextColor(ILI9341_BLACK); //black text
-  tft.setCursor(0,0); //move cursor to top
-  tft.println("Bet-it! Hit button to play");
+  tft.setCursor(0,20); //move cursor to top
+  tft.println("Bet it!\nHit button to play");
   while(digitalRead(P)==LOW);
   Serial.println("Play");
   lives = 3;
   score = 0;
   time = startTime;
+  shuffle();
+  dealer.deal();//dealer draws
+  player.deal(); player.deal(); //player draws twice
+  updateDisp(player,dealer);
+  delay(1000);
   while((lives>0) && (score<99)){ //game goes until max score or 0 lives
     //TODO: set up actual game environment (cards dealing)
-    dealer.deal();//dealer draws
-    player.deal(); player.deal(); //player draws twice
-    updateDisp(player,dealer);
     if(player.bestTotal()==21){ //check for natural blackjack
       myDFPlayer.play(11);
       Serial.println("Natural blackjack");
@@ -272,38 +275,46 @@ void loop() {
         Serial.println("Chose nothing");
         break;
     }
-    switch(whoWins(player,dealer)){ //check who wins after initial draw and after
+    int result = whoWins(player,dealer);
+    switch(result){ //check who wins after initial draw and after
       case 3: //player wins
         Serial.println("player wins");
         myDFPlayer.play(6);
-        Serial.println(dealer.disp);
-        Serial.println(player.disp);
         break;
       case 2: //dealer wins
         Serial.println("dealer wins");
         myDFPlayer.play(7);
-        Serial.println(dealer.disp);
-        Serial.println(player.disp);
         break;
       case 1: //push
         Serial.println("push");
         myDFPlayer.play(8);
-        Serial.println(dealer.disp);
-        Serial.println(player.disp);
         break;
       case 0: //nothing
+        Serial.println("continue play");
         break;
     }
     time*=timeMult;
     if(score==99){
       Serial.println("WIN");
-      Serial.println(String(lives));
+      Serial.print(String(lives));
       myDFPlayer.play(9);
+      break;
     }
     if(lives==0){
       Serial.println("Game over");
       Serial.println(String(score));
       myDFPlayer.play(10);
+      break;
+    }
+    if(result>0){
+      Serial.println(dealer.disp);
+      Serial.println(player.disp);
+      player.clear();
+      dealer.clear();
+      shuffle();
+      dealer.deal();//dealer draws
+      player.deal(); player.deal(); //player draws twice
+      updateDisp(player,dealer);
     }
   }
 }
