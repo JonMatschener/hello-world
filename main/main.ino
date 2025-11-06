@@ -4,8 +4,6 @@
 #include <DFRobotDFPlayerMini.h>
 #include <SPI.h>
 #include "BetItFont10pt7b.h"
-//#include <DejaVu_Symbols.h>
-
 
 #define H A0 //hit pin (pin 23)
 #define S A1 //stand pin (pin 24)
