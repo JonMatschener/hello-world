@@ -149,7 +149,7 @@ void shuffle(){
     int temp = order[i];
     order[i] = order[j];
     order[j] = temp;
-    Serial.print(cards[order[i]])
+    Serial.print(cards[order[i]]);
   }
   Serial.println("");
   index=0;
