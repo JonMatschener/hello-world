@@ -18,17 +18,16 @@
 
 
 const int moves[3] = {H,S,D};
-const double levels[3] = {2.5,1.8,1.2}; //voltage analog thresholds for hit, stand, double
+const double levels[3] = {2.5*204.8,1.8*204.8,1.2*204.8}; //voltage analog thresholds for hit, stand, double; multiplied by ADC steps/max voltage
 const bool activeHigh[3] = {true, false, false}; //does voltage increase when hit, stand, or double are used?
 const double startTime = 3000; //start time in milliseconds
 const double timeMult = 0.98; //time multiplier each round to slow down time
-const String suits[4] = {"/ ", "- ", "+ ", "* "}; //suits, assuming font works
-const String ranks[13] = {"2","3","4","5","6","7","8","9","X","J","Q","K","A"}; //ranks
+const char suits[4] = {'/', '-', '+', '*'}; //suits, assuming font works
+const char ranks[13] = {'2','3','4','5','6','7','8','9','X','J','Q','K','A'}; //ranks
 int lives; //number of lives
 int score; //score
 double time; //current time between reactions
 int index; //pointer to next card
-int order[52]; //order of cards
 int cards[52]; //deck
 Adafruit_ILI9341 tft = Adafruit_ILI9341(dispCS,dispDC,dispRST); //initalize display
 SoftwareSerial spkSerial(spkTX,spkRX); //serial for speaker
@@ -36,34 +35,29 @@ DFRobotDFPlayerMini myDFPlayer;
 
 class Hand{
   public:
-    int hand[10] = {0,0,0,0,0,0,0,0,0,0};
-    int numCards = 0;
     bool soft = false; //ace in hand
     int total = 0; //total except first ace if any
     String disp = "";
     int cardToNum(int card){
-      int val=card%16;
+      int val=card%13;
       if(val==12) return 1; //ace
       if(val<=8) return val+2; //2 to 10 in index 0 to 8
       return 10; //J,Q,K
     }
-    String dispCard(int card){ //convert card number to display
-      return (ranks[card%16] + suits[card/16]); //decode card to display
-    }
-    int deal(){
-      int draw = cards[order[index++]]; //return card
-      hand[numCards++] = draw; //add card to hand
+    void deal(){
+      Serial.println("Draw!");
+      int draw = cards[index++]; //return card
       int val = cardToNum(draw); //get value of draw
       if(val==1 && !soft) soft=true; //set soft total for first ace
       else total += val;
-      Serial.println("Drew " + String(draw));
-      Serial.print(dispCard(draw));
-      disp += dispCard(draw); //add card to display
+
+      disp += ranks[draw%13]; //add rank to display
+      disp += suits[draw/13]; //add suit to display
+      disp += ' '; //add space to display
+      Serial.println(disp);
+      delay(100);
     }
-    int newestCard(){return hand[numCards];}
     void clear(){
-      for(int i=0;i<10;i++) hand[i]=0;
-      numCards = 0;
       soft = false; //ace in hand
       total = 0; //soft total
       disp = "";
@@ -87,14 +81,16 @@ void updateDisp(Hand player,Hand dealer){ //show cards on display
   tft.setCursor(0,20); //move cursor to top
   tft.println(dealer.disp); //dealer hand at top
   tft.println(player.disp); //player hand at bottom
+  Serial.print("Player: ");
   Serial.println(dealer.disp);
+  Serial.print("Dealer: ");
   Serial.println(player.disp);
   tft.print("$");
-  tft.print(String(score)); //print score
-  tft.print("\t"); //print tab between score and lives
+  tft.print(score); //print score
+  tft.print("        "); //print tab between score and lives
   for(int i=0;i<lives;i++) tft.print("-"); //print lives
-  Serial.println(String(score));
-  Serial.println(String(lives));
+  Serial.println(score);
+  Serial.println(lives);
 }
 
 //hard total moves
@@ -137,17 +133,16 @@ int await(double time){
     for(int i=0;i<3;i++)
     if((analogRead(moves[i])>levels[i])==activeHigh[i]) return moves[i]; //read each pin for a move
   }
-  return 0;
+  return 5;
 }
 
 void shuffle(){
-  for(int i=0;i<52;i++) order[i]=i;
   for(int i=0;i<52;i++){ //choose random index to shuffle for each card
     int j = random(52); //random index
-    int temp = order[i];
-    order[i] = order[j];
-    order[j] = temp;
-    Serial.print(cards[order[i]]);
+    int temp = cards[i];
+    cards[i] = cards[j];
+    cards[j] = temp;
+    Serial.print(cards[i]);
   }
   Serial.println("");
   index=0;
@@ -202,7 +197,7 @@ void setup() {
 void loop() {
   digitalWrite(8, HIGH);  // turn the LED on (HIGH is the voltage level)
   Serial.println("loop started");
-  for(int s=0;s<4;s++) for(int r=0;r<13;r++) cards[13*s+r] = 16*s+r; //card[i/16] = suit, card[i%16] = rank
+  for(int i=0;i<52;i++) cards[i]=i; //card[i/13] = suit, card[i%13] = rank
   // initialize game and hands
   Hand player;
   Hand dealer;
@@ -260,7 +255,6 @@ void loop() {
       case S:
         Serial.println("Chose stand");
         while (dealer.dealerHits()) dealer.deal(); //keep dealing to dealer
-        updateDisp(player,dealer);
         break;
       case H:
         Serial.println("Chose hit");
@@ -269,10 +263,11 @@ void loop() {
       case D:
         Serial.println("Chose double");
         break;
-      case 0:
+      case 5:
         Serial.println("Chose nothing");
         break;
     }
+    updateDisp(player,dealer);
     int result = whoWins(player,dealer);
     switch(result){ //check who wins after initial draw and after
       case 3: //player wins
