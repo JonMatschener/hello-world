@@ -228,6 +228,12 @@ void loop() {
       myDFPlayer.play(11);
       Serial.println("Natural blackjack");
       delay(1500);
+      player.clear();
+      dealer.clear();
+      shuffle();
+      dealer.deal();//dealer draws
+      player.deal(); player.deal(); //player draws twice
+      updateDisp(player,dealer);
       continue;
     }
     int command = action(player,dealer); //create action
