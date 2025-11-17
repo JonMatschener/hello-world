@@ -124,7 +124,7 @@ const int soft[8][10] = { //suggested moved for soft totals, soft[9-i][j-2] for 
 int action(Hand player,Hand dealer){
   int p = player.bestTotal();
   int d = dealer.bestTotal();
-  if(player.soft) return soft[20-p,d-2]; //20-, not 9- because A = 11
+  if(player.soft) return soft[20-p][d-2]; //20-, not 9- because A = 11
   else return hard[max(0,17-p)][d-2];
   Serial.println(player.soft + " " + String(p) + " " + String(d));
 }
@@ -140,7 +140,7 @@ int await(double time){
 
 void shuffle(){
   for(int i=0;i<52;i++){ //choose random index to shuffle for each card
-    int j = random(52); //random index
+    int j = random(i,52); //random index
     int temp = cards[i];
     cards[i] = cards[j];
     cards[j] = temp;
@@ -246,6 +246,8 @@ void loop() {
         delay(1500);
         break;
     }
+    tft.setCursor(180,120); //move cursor right side
+    tft.println("GO!");
     Serial.println(String(time) + " milliseconds"); //tell action
     int act=await(time); //wait for action
     if(command==act){//if correct
