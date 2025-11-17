@@ -4,6 +4,7 @@
 #include <DFRobotDFPlayerMini.h>
 #include <SPI.h>
 #include "BetItFont10pt7b.h"
+#include "FreeMonoBold18pt7b.h"
 
 #define H A0 //hit pin (pin 23)
 #define S A1 //stand pin (pin 24)
@@ -170,7 +171,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("Serial check");
   tft.begin();
-  tft.setFont(&BetItFont10pt7b); //match name of original file
+  tft.setFont(&FreeMonoBold18pt7b); //match name of original file
   tft.setRotation(1);
   pinMode(8, OUTPUT);
   digitalWrite(8, HIGH);  // turn the LED on (HIGH is the voltage level)
@@ -212,6 +213,7 @@ void loop() {
   tft.println("Bet it!\nHit button to play");
   while(digitalRead(P)==LOW);
   Serial.println("Play");
+  tft.setFont(&BetItFont10pt7b); //match name of original file
   lives = 3;
   score = 0;
   time = startTime;
@@ -308,9 +310,10 @@ void loop() {
     }
     time*=timeMult;
     if(score==99){
+      tft.setFont(&FreeMonoBold18pt7b);
       Serial.println("WIN");
       Serial.print(String(lives));
-      tft.fillScreen(ILI9341_WHITE); //clear screen
+      tft.fillScreen(ILI9341_GREEN); //clear screen
       tft.setTextColor(ILI9341_BLACK); //black text
       tft.setCursor(0,20); //move cursor to top
       tft.println("YOU WIN"); //game result
@@ -319,9 +322,10 @@ void loop() {
       break;
     }
     if(lives==0){
+      tft.setFont(&FreeMonoBold18pt7b);
       Serial.println("Game over");
       Serial.println(String(score));
-      tft.fillScreen(ILI9341_WHITE); //clear screen
+      tft.fillScreen(ILI9341_RED); //clear screen
       tft.setTextColor(ILI9341_BLACK); //black text
       tft.setCursor(0,20); //move cursor to top
       tft.println("GAME OVER"); //game result
