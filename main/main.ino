@@ -210,7 +210,7 @@ void loop() {
   tft.fillScreen(ILI9341_RED); //clear screen
   tft.setTextColor(ILI9341_BLACK); //black text
   tft.setCursor(0,20); //move cursor to top
-  tft.println("Bet it!\nHit button to play");
+  tft.println("Bet it!\nHit button\nto play");
   while(digitalRead(P)==LOW);
   Serial.println("Play");
   tft.setFont(&BetItFont10pt7b); //match name of original file
