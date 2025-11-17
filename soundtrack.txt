@@ -1,0 +1,12 @@
+1 "Stand it"
+2 "Hit it"
+3 "Double it"
+4 *cash register sound effect* (right action)
+5 "Bad move" (wrong action)
+6 "Nice hand" (win hand)
+7 "Tough luck" (lose hand)
+8 "Looks like a push" (tie)
+9 "Jackpot" (max score)
+10 "Table's closed" (0 lives)
+11 "That's blackjack"
+12 "Good evening, welcome to the table" (startup)
