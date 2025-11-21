@@ -1,3 +1,3 @@
 # hello-world
-This repository is for practicing the github Flow.
-JON, Dom, and Josh like turtles:)
+Upload main.ino to the microcontroller
+The files in Soundtrack go to the root of the mini SD card of the DFPlayer Mini.
